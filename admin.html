@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin – My Pine Blog</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0d1117] text-gray-200 p-4 max-w-xl mx-auto">
+  <h1 class="text-2xl mb-4 font-bold">🛠️ 新增文章</h1>
+
+  <label class="block mb-2">標題
+    <input id="title" class="w-full p-2 rounded-lg bg-[#161b22]" />
+  </label>
+
+  <label class="block mb-2">YouTube 影片 ID
+    <input id="yt" class="w-full p-2 rounded-lg bg-[#161b22]" />
+  </label>
+
+  <label class="block mb-2">摘要（卡片兩行文字）
+    <textarea id="summary" rows="2"
+      class="w-full p-2 rounded-lg bg-[#161b22]"></textarea>
+  </label>
+
+  <label class="block mb-2">PINE 程式碼
+    <textarea id="pine" rows="8"
+      class="w-full font-mono p-2 rounded-lg bg-[#161b22]"></textarea>
+  </label>
+
+  <button id="add"
+    class="px-4 py-2 rounded-lg bg-emerald-600 mt-2">➕ 加入 posts.json</button>
+
+  <hr class="my-6 border-gray-700" />
+
+  <h2 class="text-xl font-semibold mb-4">📥 待合併留言</h2>
+  <pre id="cmtBox" class="bg-[#161b22] p-2 rounded-lg"></pre>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>
