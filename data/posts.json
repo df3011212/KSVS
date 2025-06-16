@@ -1,13 +1,10 @@
 [
   {
-    "id": "demo",
-    "title": "BTC EMA 交叉策略",
-    "youtube": "dQw4w9WgXcQ",
-    "summary": "用 EMA24 / EMA52 判斷趨勢，附帶 TP / SL 範例。",
-    "pine": "//@version=5\nindicator(\"EMA Cross\", overlay=true)\nplot(ta.ema(close, 24))\nplot(ta.ema(close, 52))",
-    "date": 1718505600000,
-    "comments": [
-      { "ts": 1718520000000, "body": "感謝分享 🙌" }
-    ]
+    "id": "a420e673-9941-4d5d-aeb2-004d73499c0c",
+    "title": "MACD 6.26.9 紅綠點設計",
+    "youtube": "12132",
+    "summary": "改良版的 MACD 指標（移動平均收斂背離指標），不只畫出傳統的 MACD 線與 Signal 線，還 額外在金叉與死叉的位置標記綠色與紅色圓點，協助用戶視覺上快速辨識多空訊號。",
+    "pine": "//@version=6\nindicator(title=\"MACD 6.26.9 紅綠點設計\", shorttitle=\"MACD\", overlay=false)\n\n// === 參數 ===\nfast_length   = input.int(title=\"Fast Length\",   defval=12, minval=1, maxval=50)\nslow_length   = input.int(title=\"Slow Length\",   defval=26, minval=1, maxval=100)\nsignal_length = input.int(title=\"Signal Smoothing\", defval=9,  minval=1, maxval=50)\n\nsma_source = input.string(title=\"MACD MA Type\",  defval=\"EMA\", options=[\"SMA\", \"EMA\"])\nsma_signal = input.string(title=\"Signal MA Type\", defval=\"EMA\", options=[\"SMA\", \"EMA\"])\n\nsrc = input.source(title=\"Source\", defval=close)\n\n// === 樣式 ===\nmacdColor    = input.color(title=\"MACD 線顏色\",   defval=color.blue)\nsignalColor  = input.color(title=\"Signal 線顏色\", defval=color.orange)\nmacdWidth    = input.int(title=\"MACD 線寬\",       defval=1, minval=1, maxval=5)\nsignalWidth  = input.int(title=\"Signal 線寬\",     defval=1, minval=1, maxval=5)\n\n// === 計算 ===\nfast_ma = sma_source == \"SMA\" ? ta.sma(src, fast_length) : ta.ema(src, fast_length)\nslow_ma = sma_source == \"SMA\" ? ta.sma(src, slow_length) : ta.ema(src, slow_length)\nmacd    = fast_ma - slow_ma\nsignal  = sma_signal == \"SMA\" ? ta.sma(macd, signal_length) : ta.ema(macd, signal_length)\n\n// === 圖形 ===\nhline(0, \"Zero Line\", color=color.new(color.gray, 60))\nplot(macd,   title=\"MACD Line\",   color=macdColor,   linewidth=macdWidth)\nplot(signal, title=\"Signal Line\", color=signalColor, linewidth=signalWidth)\n\n// === 金叉 / 死叉 標記 ===\ngoldenCross = ta.crossover(macd, signal)   // 快線上穿 → 金叉\ndeathCross  = ta.crossunder(macd, signal)  // 快線下穿 → 死叉\n\nplot(goldenCross ? macd : na, title=\"Golden Cross Point\", style=plot.style_circles, color=color.lime, linewidth=3)\nplot(deathCross  ? macd : na, title=\"Death Cross Point\",  style=plot.style_circles, color=color.red,  linewidth=3)",
+    "date": 1750077779470
   }
 ]
