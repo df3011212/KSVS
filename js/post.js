@@ -96,3 +96,13 @@ function tplComment(c) {
             <span class="text-xs text-gray-400">${d}</span><br/>${safe}
           </div>`;
 }
+
+document.getElementById("backBtn").onclick = () => {
+  const prevLength = history.length;
+  history.back();
+  setTimeout(() => {
+    if (history.length === prevLength) {
+      location.href = "index.html";
+    }
+  }, 500);
+};
