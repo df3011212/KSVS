@@ -4,11 +4,32 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Pine Article</title>
+
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- highlight.js ─ GitHub Dark 佈景 -->
+  <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.css">
+  <script defer
+        src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/highlight.min.js"></script>
+
+  <!-- 自訂樣式（讓 code 自動換行、不跑版）-->
+  <style>
+    pre code{
+      white-space:pre-wrap;
+      word-break:break-word;
+      line-height:1.6;
+      display:block;
+      overflow-x:auto;
+    }
+  </style>
 </head>
+
 <body class="bg-[#0d1117] text-gray-200">
-  <div id="article" class="max-w-3xl mx-auto p-4"></div>
-  <script src="js/post.js"></script>
+  <main id="article" class="max-w-3xl mx-auto p-4"></main>
+
+  <!-- 單篇文章邏輯 -->
+  <script type="module" src="js/post.js"></script>
 </body>
 </html>
