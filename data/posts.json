@@ -1,0 +1,13 @@
+[
+  {
+    "id": "demo",
+    "title": "BTC EMA 交叉策略",
+    "youtube": "dQw4w9WgXcQ",
+    "summary": "用 EMA24 / EMA52 判斷趨勢，附帶 TP / SL 範例。",
+    "pine": "//@version=5\nindicator(\"EMA Cross\", overlay=true)\nplot(ta.ema(close, 24))\nplot(ta.ema(close, 52))",
+    "date": 1718505600000,
+    "comments": [
+      { "ts": 1718520000000, "body": "感謝分享 🙌" }
+    ]
+  }
+]
