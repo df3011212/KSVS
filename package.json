@@ -1,0 +1,42 @@
+{
+  "name": "coinglass-heatmap-web",
+  "version": "1.0.0",
+  "description": "Coinglass Heatmap 分析工具 - 網頁版",
+  "main": "proxy-server.js",
+  "scripts": {
+    "start": "node proxy-server.js",
+    "dev": "nodemon proxy-server.js",
+    "proxy": "node proxy-server.js",
+    "serve": "http-server . -p 8000 -c-1"
+  },
+  "keywords": [
+    "cryptocurrency",
+    "trading",
+    "heatmap",
+    "coinglass",
+    "technical-analysis",
+    "support-resistance"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "http-server": "^14.1.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "bugs": {
+    "url": ""
+  },
+  "homepage": ""
+} 
