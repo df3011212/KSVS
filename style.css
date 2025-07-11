@@ -171,6 +171,33 @@ select:focus, input[type="checkbox"]:focus {
     color: white;
 }
 
+/* GitHub Pages 提示樣式 */
+.github-pages-note {
+    margin-top: 15px;
+    padding: 15px;
+    background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+    border: 1px solid #2196f3;
+    border-radius: 8px;
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+.github-pages-note p {
+    margin: 0 0 10px 0;
+    font-weight: 600;
+    color: #1976d2;
+}
+
+.github-pages-note ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #424242;
+}
+
+.github-pages-note li {
+    margin: 5px 0;
+}
+
 .results {
     display: grid;
     gap: 20px;
