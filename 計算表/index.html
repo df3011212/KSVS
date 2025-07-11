@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>OKX 槓桿獲利計算工具</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 加密貨幣搜尋彈窗 -->
+  <div id="cryptoSearchModalOverlay">
+    <div id="cryptoSearchModal">
+      <h2>🔍 加密貨幣搜尋</h2>
+      <input type="text" id="cryptoSearchInput" placeholder="搜尋幣種（如 BTC、ETH、OP）">
+
+      <!-- 搜尋結果 -->
+      <div class="section-header">
+        <h3>🔎 搜尋結果</h3>
+        <button class="btn-clear" onclick="clearSearchResult()">🗑 一鍵清除</button>
+      </div>
+      <div id="searchResult" class="crypto-list"></div>
+
+      <!-- 最近搜尋 -->
+      <div class="section-header">
+        <h3>🕘 最近搜尋</h3>
+        <button class="btn-clear" onclick="clearCryptoHistory()">🗑 一鍵清除</button>
+      </div>
+      <div class="crypto-list" id="recentSearchList"></div>
+
+      <!-- 我的最愛 -->
+      <div class="crypto-favorite">
+        <h3>⭐ 我的最愛</h3>
+        <div id="favoriteList"></div>
+      </div>
+
+      <div class="actions">
+        <button onclick="closeCryptoSearch()">關閉</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="section yellow">
+      <h2>開單速算表</h2>
+
+      <label>選擇幣種
+        <div class="symbol-row">
+          <input id="symbolInput" type="text" autocomplete="off" list="symbolList" />
+          <datalist id="symbolList"></datalist>
+          <button type="button" class="search-btn" onclick="openCryptoSearch()">🔍 搜尋</button>
+          <button type="button" class="clear-btn" onclick="clearSymbolInput()">清除</button>
+        </div>
+      </label>
+
+      <label>本金 USDT
+        <input id="capital" type="number" value="1658" oninput="calculate()"/>
+      </label>
+
+      <label>首次開倉價格
+        <div class="price-row">
+          <input id="entryPrice" type="number" step="0.00001" oninput="calculate()"/>
+          <button id="togglePriceBtn" onclick="togglePriceMode()">使用限價</button>
+        </div>
+      </label>
+
+      <!-- 資金費率顯示區 -->
+      <div id="funding-rate-container" style="margin-top: 8px; font-weight: bold;">
+        資金費率：<span id="funding-rate" style="color:gray;">讀取中...</span>
+        <div id="funding-rate-long" style="margin-top: 4px; font-size: 14px;"></div>
+        <div id="funding-rate-short" style="margin-top: 2px; font-size: 14px;"></div>
+      </div>
+
+      <label>保證金比例 (%)
+        <input id="marginRatio" type="number" value="5" oninput="calculate()"/>
+      </label>
+
+      <label>止損比例 (%)
+        <input id="stoploss" type="number" value="7.52" oninput="calculate()"/>
+      </label>
+
+      <label>最大虧損 USDT
+        <input id="maxLoss" type="number" value="300" oninput="calculate()"/>
+      </label>
+
+      <label>開倉方向</label>
+      <div class="position-radio-group">
+        <label>
+          <input type="radio" name="positionSide" value="開多" checked>
+          📈 開多
+        </label>
+        <label>
+          <input type="radio" name="positionSide" value="開空">
+          📉 開空
+        </label>
+      </div>
+
+      <div class="results-grid">
+        <div class="result-item">槓桿倍數：<span id="leverage"></span> 倍</div>
+        <div class="result-item">總持倉量：<span id="position"></span></div>
+      </div>
+
+      <!-- 保存書籤功能 -->
+      <button id="saveBtn" onclick="saveBookmark()">💾 儲存書籤</button>
+    </div>
+  </div>
+
+  <!-- 書籤側邊欄 -->
+  <div id="historySidebar">
+    <h3>📖 書籤紀錄</h3>
+    <div class="bookmark-actions-header">
+      <button onclick="clearAllBookmarks()" class="btn-clear">🗑 清除全部</button>
+    </div>
+    <div id="historyList"></div>
+  </div>
+
+  <!-- 書籤按鈕 -->
+  <button id="toggleHistoryBtn" onclick="toggleBookmarkSidebar()">📚 書籤</button>
+
+  <script>
+    // 全局變數
+    let useMarketPrice = true;
+    let symbolData = [];
+    let priceUpdateInterval;
+    let fundingRateInterval;
+
+    // 價格模式切換
+    function togglePriceMode() {
+      useMarketPrice = !useMarketPrice;
+      const btn = document.getElementById('togglePriceBtn');
+      btn.textContent = useMarketPrice ? '使用限價' : '使用市價';
+      
+      if (useMarketPrice) {
+        fetchMarketPrice();
+        startPriceUpdates();
+      } else {
+        stopPriceUpdates();
+      }
+    }
+
+    // 啟動即時價格更新
+    function startPriceUpdates() {
+      if (priceUpdateInterval) clearInterval(priceUpdateInterval);
+      priceUpdateInterval = setInterval(() => {
+        if (useMarketPrice) {
+          fetchMarketPrice();
+        }
+      }, 3000); // 每3秒更新一次
+    }
+
+    // 停止價格更新
+    function stopPriceUpdates() {
+      if (priceUpdateInterval) {
+        clearInterval(priceUpdateInterval);
+        priceUpdateInterval = null;
+      }
+    }
+
+    // 轉換函數
+    function instIdToDisplay(id) {
+      const p = id.split("-");
+      return p[0] + p[1] + ".P";
+    }
+
+    function displayToInstId(d) {
+      if (!d.endsWith(".P")) return d;
+      const code = d.slice(0, -2);
+      const base = code.slice(0, -4);
+      const quote = code.slice(-4);
+      return `${base}-${quote}-SWAP`;
+    }
+
+    // 載入幣種列表
+    async function loadSymbols() {
+      try {
+        const res = await fetch("https://www.okx.com/api/v5/public/instruments?instType=SWAP");
+        const data = await res.json();
+        const dl = document.getElementById("symbolList");
+        
+        if (!dl) return;
+        
+        symbolData = data.data.filter(i => i.settleCcy === "USDT" && i.instId.endsWith("-SWAP"));
+        
+        symbolData.forEach(i => {
+          const opt = document.createElement("option");
+          opt.value = instIdToDisplay(i.instId);
+          dl.append(opt);
+        });
+        
+        // 設定預設值
+        document.getElementById("symbolInput").value = instIdToDisplay("OP-USDT-SWAP");
+        fetchMarketPrice();
+        fetchFundingRate(document.getElementById("symbolInput").value);
+        startPriceUpdates();
+        startFundingRateUpdates();
+      } catch (error) {
+        console.error("載入幣種失敗：", error);
+      }
+    }
+
+    // 獲取市價
+    async function fetchMarketPrice() {
+      try {
+        const symbolValue = document.getElementById("symbolInput").value;
+        if (!symbolValue) return;
+        
+        const inst = displayToInstId(symbolValue);
+        const r = await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${inst}`);
+        const j = await r.json();
+        const p = parseFloat(j.data?.[0]?.last);
+        
+        if (useMarketPrice && !isNaN(p)) {
+          document.getElementById("entryPrice").value = p;
+          calculate();
+        }
+      } catch (error) {
+        console.error("獲取市價失敗：", error);
+      }
+    }
+
+    // 資金費率相關功能
+    async function fetchFundingRate(symbol) {
+      const instId = symbol.replace('USDT.P', '-USDT-SWAP');
+      try {
+        const response = await fetch(`https://www.okx.com/api/v5/public/funding-rate?instId=${instId}`);
+        const data = await response.json();
+        if (data?.data?.length > 0) {
+          const rate = parseFloat(data.data[0].fundingRate);
+          const ratePercent = +(rate * 100).toFixed(6);
+          const percentText = ratePercent.toFixed(4) + '%';
+
+          document.getElementById("funding-rate").textContent = percentText;
+          document.getElementById("funding-rate").style.color = rate > 0 ? "green" : rate < 0 ? "red" : "gray";
+
+          const longDiv = document.getElementById("funding-rate-long");
+          const shortDiv = document.getElementById("funding-rate-short");
+          const isBTC = symbol.startsWith("BTC");
+
+          let longClass = '', longStrategy = '', longColor = '';
+          let shortClass = '', shortStrategy = '', shortColor = '';
+
+          if (isBTC) {
+            if (ratePercent >= -0.01 && ratePercent <= 0.03) {
+              longClass = '✅ 正常（建議可交易）';
+              longColor = 'green';
+            } else if ((ratePercent > 0.03 && ratePercent <= 0.2) || (ratePercent < -0.01 && ratePercent >= -0.03)) {
+              longClass = '⚠️ 非正常（高成本區）';
+              longColor = 'orange';
+            } else if ((ratePercent > 0.2 && ratePercent <= 0.375) || (ratePercent < -0.2 && ratePercent >= -0.375)) {
+              longClass = '❗ 特殊（高風險，勿追高）';
+              longColor = 'red';
+            } else {
+              longClass = '🟡 不在定義範圍';
+              longColor = 'gray';
+            }
+            shortClass = longClass;
+            shortColor = longColor;
+          } else {
+            if (ratePercent >= -0.02 && ratePercent <= 0.06) {
+              longClass = '✅ 正常（建議可交易）';
+              longColor = 'green';
+            } else if ((ratePercent > 0.06 && ratePercent <= 0.4) || (ratePercent < -0.02 && ratePercent >= -0.4)) {
+              longClass = '⚠️ 非正常（高成本區）';
+              longColor = 'orange';
+            } else if ((ratePercent > 0.4 && ratePercent <= 0.75) || (ratePercent < -0.4 && ratePercent >= -0.75)) {
+              longClass = '❗ 特殊（高風險，勿追高）';
+              longColor = 'red';
+            } else {
+              longClass = '🟡 不在定義範圍';
+              longColor = 'gray';
+            }
+            shortClass = longClass;
+            shortColor = longColor;
+          }
+
+          if (rate > 0) {
+            longStrategy = '⚠️ 你需付費（空方市場偏強）';
+            shortStrategy = '✅ 可收費（市場偏空）';
+          } else if (rate < 0) {
+            longStrategy = '✅ 可收費（市場偏多）';
+            shortStrategy = '⚠️ 你需付費（多方市場偏強）';
+          } else {
+            longStrategy = '🟡 中性（雙方無資金費）';
+            shortStrategy = '🟡 中性（雙方無資金費）';
+          }
+
+          longDiv.innerHTML = `💡 做多：<span style="color:${longColor}">${longClass}</span>｜<span style="color:${longColor}">${longStrategy}</span>`;
+          shortDiv.innerHTML = `💡 做空：<span style="color:${shortColor}">${shortClass}</span>｜<span style="color:${shortColor}">${shortStrategy}</span>`;
+
+        } else {
+          document.getElementById("funding-rate").textContent = "無資料";
+          document.getElementById("funding-rate-long").textContent = "";
+          document.getElementById("funding-rate-short").textContent = "";
+        }
+      } catch (err) {
+        console.error("資金費率取得錯誤：", err);
+        document.getElementById("funding-rate").textContent = "錯誤";
+        document.getElementById("funding-rate-long").textContent = "";
+        document.getElementById("funding-rate-short").textContent = "";
+      }
+    }
+
+    // 啟動資金費率更新
+    function startFundingRateUpdates() {
+      if (fundingRateInterval) clearInterval(fundingRateInterval);
+      fundingRateInterval = setInterval(() => {
+        const symbolValue = document.getElementById("symbolInput").value;
+        if (symbolValue && symbolValue.endsWith("USDT.P")) {
+          fetchFundingRate(symbolValue);
+        }
+      }, 15000); // 每15秒更新一次
+    }
+
+    // 核心計算函數
+    function calculate() {
+      const cap = +document.getElementById("capital").value;
+      const mr = +document.getElementById("marginRatio").value / 100;
+      const sr = +document.getElementById("stoploss").value / 100;
+      const ml = +document.getElementById("maxLoss").value;
+      const ep = +document.getElementById("entryPrice").value;
+
+      if (!cap || !mr || !sr || !ml || !ep) return;
+
+      const B3 = cap * mr;
+      const B4 = ml / (B3 * sr);
+      document.getElementById("leverage").textContent = Math.round(B4);
+
+      const position = Math.round(B3 * B4);
+      document.getElementById("position").textContent = `$${position.toLocaleString()} USDT`;
+
+
+    }
+
+         // 書籤功能
+     function saveBookmark() {
+       const symbol = document.getElementById("symbolInput").value;
+       const capital = document.getElementById("capital").value;
+       const entryPrice = document.getElementById("entryPrice").value;
+       const marginRatio = document.getElementById("marginRatio").value;
+       const stoploss = document.getElementById("stoploss").value;
+       const maxLoss = document.getElementById("maxLoss").value;
+       const positionSide = document.querySelector('input[name="positionSide"]:checked')?.value || "開多";
+
+       if (!symbol || !capital || !entryPrice) {
+         alert("請填入必要資訊（幣種、本金、開倉價格）");
+         return;
+       }
+
+       const bookmark = {
+         id: Date.now(),
+         timestamp: new Date().toLocaleString('zh-TW'),
+         symbol,
+         capital: parseFloat(capital),
+         entryPrice: parseFloat(entryPrice),
+         marginRatio: parseFloat(marginRatio),
+         stoploss: parseFloat(stoploss),
+         maxLoss: parseFloat(maxLoss),
+         positionSide
+       };
+
+       // 計算結果
+       const leverage = document.getElementById("leverage").textContent;
+       const position = document.getElementById("position").textContent;
+
+       bookmark.results = {
+         leverage,
+         position
+       };
+
+       // 保存到 localStorage
+       let bookmarks = JSON.parse(localStorage.getItem("tradingBookmarks") || "[]");
+       bookmarks.unshift(bookmark);
+       bookmarks = bookmarks.slice(0, 50); // 最多保存50個書籤
+       localStorage.setItem("tradingBookmarks", JSON.stringify(bookmarks));
+
+       alert("📚 書籤已保存！");
+       loadBookmarks();
+     }
+
+    // 載入書籤
+    function loadBookmarks() {
+      const bookmarks = JSON.parse(localStorage.getItem("tradingBookmarks") || "[]");
+      const listDiv = document.getElementById("historyList");
+      listDiv.innerHTML = "";
+
+      bookmarks.forEach(bookmark => {
+        const div = document.createElement("div");
+        div.className = "bookmark-card";
+        div.innerHTML = `
+          <div class="bookmark-info">
+            <strong>${bookmark.symbol}</strong> - ${bookmark.positionSide}<br>
+            本金: $${bookmark.capital} | 價格: $${bookmark.entryPrice}<br>
+            槓桿: ${bookmark.results.leverage} | 持倉: ${bookmark.results.position}<br>
+            <small>${bookmark.timestamp}</small>
+          </div>
+          <div class="bookmark-actions">
+            <button class="apply-btn" onclick="applyBookmark(${bookmark.id})">📋 套用</button>
+            <button class="delete-btn" onclick="deleteBookmark(${bookmark.id})">🗑 刪除</button>
+          </div>
+        `;
+        listDiv.appendChild(div);
+      });
+    }
+
+         // 套用書籤
+     function applyBookmark(id) {
+       const bookmarks = JSON.parse(localStorage.getItem("tradingBookmarks") || "[]");
+       const bookmark = bookmarks.find(b => b.id === id);
+       
+       if (!bookmark) return;
+
+       document.getElementById("symbolInput").value = bookmark.symbol;
+       document.getElementById("capital").value = bookmark.capital;
+       document.getElementById("entryPrice").value = bookmark.entryPrice;
+       document.getElementById("marginRatio").value = bookmark.marginRatio;
+       document.getElementById("stoploss").value = bookmark.stoploss;
+       document.getElementById("maxLoss").value = bookmark.maxLoss;
+
+       // 設定開倉方向
+       const radioBtn = document.querySelector(`input[name="positionSide"][value="${bookmark.positionSide}"]`);
+       if (radioBtn) radioBtn.checked = true;
+
+       // 重新計算和獲取資料
+       calculate();
+       fetchFundingRate(bookmark.symbol);
+       if (useMarketPrice) {
+         fetchMarketPrice();
+       }
+
+       alert("📋 書籤參數已套用！");
+     }
+
+    // 刪除書籤
+    function deleteBookmark(id) {
+      if (!confirm("確定要刪除這個書籤嗎？")) return;
+      
+      let bookmarks = JSON.parse(localStorage.getItem("tradingBookmarks") || "[]");
+      bookmarks = bookmarks.filter(b => b.id !== id);
+      localStorage.setItem("tradingBookmarks", JSON.stringify(bookmarks));
+      loadBookmarks();
+    }
+
+    // 清除所有書籤
+    function clearAllBookmarks() {
+      if (!confirm("確定要清除所有書籤嗎？此操作無法復原。")) return;
+      
+      localStorage.removeItem("tradingBookmarks");
+      loadBookmarks();
+      alert("🗑 所有書籤已清除！");
+    }
+
+    // 切換書籤側邊欄
+    function toggleBookmarkSidebar() {
+      const sidebar = document.getElementById("historySidebar");
+      if (sidebar.style.right === "0px") {
+        sidebar.style.right = "-350px";
+      } else {
+        sidebar.style.right = "0px";
+        loadBookmarks();
+      }
+    }
+
+    
+
+    // 搜尋相關功能
+    function openCryptoSearch() {
+      document.getElementById("cryptoSearchModalOverlay").style.display = "flex";
+      loadRecentSearches();
+      loadFavorites();
+    }
+
+    function closeCryptoSearch() {
+      document.getElementById("cryptoSearchModalOverlay").style.display = "none";
+    }
+
+    function clearSymbolInput() {
+      document.getElementById('symbolInput').value = '';
+      calculate();
+    }
+
+    function clearSearchResult() {
+      document.getElementById("searchResult").innerHTML = "";
+    }
+
+    function clearCryptoHistory() {
+      localStorage.removeItem("cryptoHistory");
+      document.getElementById("recentSearchList").innerHTML = "";
+    }
+
+    function searchCrypto() {
+      const query = document.getElementById("cryptoSearchInput").value.toUpperCase();
+      const resultDiv = document.getElementById("searchResult");
+      
+      if (!query) {
+        resultDiv.innerHTML = "";
+        return;
+      }
+
+      const filtered = symbolData.filter(item => {
+        const display = instIdToDisplay(item.instId);
+        return display.includes(query);
+      }).slice(0, 20);
+
+      resultDiv.innerHTML = "";
+      filtered.forEach(item => {
+        const display = instIdToDisplay(item.instId);
+        const div = document.createElement("div");
+        div.className = "crypto-item";
+        div.innerHTML = `
+          <span onclick="selectCrypto('${display}')">${display}</span>
+          <button onclick="toggleFavorite('${display}')">⭐</button>
+        `;
+        resultDiv.appendChild(div);
+      });
+    }
+
+    function selectCrypto(symbol) {
+      document.getElementById("symbolInput").value = symbol;
+      saveToHistory(symbol);
+      fetchMarketPrice();
+      fetchFundingRate(symbol);
+      closeCryptoSearch();
+      calculate();
+    }
+
+    function saveToHistory(symbol) {
+      let history = JSON.parse(localStorage.getItem("cryptoHistory") || "[]");
+      history = history.filter(item => item !== symbol);
+      history.unshift(symbol);
+      history = history.slice(0, 10);
+      localStorage.setItem("cryptoHistory", JSON.stringify(history));
+    }
+
+    function loadRecentSearches() {
+      const history = JSON.parse(localStorage.getItem("cryptoHistory") || "[]");
+      const listDiv = document.getElementById("recentSearchList");
+      listDiv.innerHTML = "";
+      
+      history.forEach(symbol => {
+        const div = document.createElement("div");
+        div.className = "crypto-item";
+        div.innerHTML = `<span onclick="selectCrypto('${symbol}')">${symbol}</span>`;
+        listDiv.appendChild(div);
+      });
+    }
+
+    function toggleFavorite(symbol) {
+      let favorites = JSON.parse(localStorage.getItem("cryptoFavorites") || "[]");
+      if (favorites.includes(symbol)) {
+        favorites = favorites.filter(item => item !== symbol);
+      } else {
+        favorites.push(symbol);
+      }
+      localStorage.setItem("cryptoFavorites", JSON.stringify(favorites));
+      loadFavorites();
+    }
+
+    function loadFavorites() {
+      const favorites = JSON.parse(localStorage.getItem("cryptoFavorites") || "[]");
+      const listDiv = document.getElementById("favoriteList");
+      listDiv.innerHTML = "";
+      
+      favorites.forEach(symbol => {
+        const div = document.createElement("div");
+        div.className = "favorite-item";
+        div.innerHTML = `
+          <span class="coin-name" onclick="selectCrypto('${symbol}')">${symbol}</span>
+          <button class="remove" onclick="toggleFavorite('${symbol}')">×</button>
+        `;
+        listDiv.appendChild(div);
+      });
+    }
+
+    // 監聽符號輸入變化
+    document.getElementById("symbolInput").addEventListener("input", () => {
+      const symbolValue = document.getElementById("symbolInput").value;
+      if (useMarketPrice) {
+        fetchMarketPrice();
+      }
+      if (symbolValue && symbolValue.endsWith("USDT.P")) {
+        fetchFundingRate(symbolValue);
+      }
+    });
+
+    // 監聽搜尋輸入
+    document.getElementById("cryptoSearchInput").addEventListener("input", searchCrypto);
+
+    // 點擊遮罩關閉彈窗
+    document.getElementById("cryptoSearchModalOverlay").addEventListener("click", (e) => {
+      if (e.target === e.currentTarget) {
+        closeCryptoSearch();
+      }
+    });
+
+    // 頁面載入完成後初始化
+    document.addEventListener("DOMContentLoaded", () => {
+      loadSymbols();
+      calculate();
+      loadBookmarks();
+    });
+
+    // 頁面卸載時清理定時器
+    window.addEventListener("beforeunload", () => {
+      stopPriceUpdates();
+      if (fundingRateInterval) clearInterval(fundingRateInterval);
+    });
+  </script>
+
+  <footer style="text-align:center; padding: 16px; font-size: 14px; color: gray;">
+    洪士弘 版權所有 ©2025 大仁老師投資理財學堂專屬工具
+  </footer>
+</body>
+</html>
