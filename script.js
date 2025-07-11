@@ -1732,7 +1732,7 @@ async function getLastPrice(pair) {
         
         if (data.price) {
             recordApiSuccess('binance');
-            return Number(data.price);
+        return Number(data.price);
         } else {
             throw new Error('Invalid futures price data');
         }
@@ -1745,26 +1745,26 @@ async function getLastPrice(pair) {
 
 // 獲取 Coinglass 數據（帶多代理重試機制）
 async function getHeatmapData(symbol, interval) {
-    const now = new Date();
-    now.setMinutes(0, 0, 0); // 整點時間
-    const ts = Math.floor(now.getTime() / 1000);
-    
-    const timeRange = interval === '4h' ? 14400 : 86400; // 4小時或24小時
-    
-    const params = new URLSearchParams({
-        symbol: symbol,
-        interval: interval,
-        startTime: ts - timeRange,
-        endTime: ts,
-        minLimit: false,
-        data: API_KEY
-    });
+        const now = new Date();
+        now.setMinutes(0, 0, 0); // 整點時間
+        const ts = Math.floor(now.getTime() / 1000);
+        
+        const timeRange = interval === '4h' ? 14400 : 86400; // 4小時或24小時
+        
+        const params = new URLSearchParams({
+            symbol: symbol,
+            interval: interval,
+            startTime: ts - timeRange,
+            endTime: ts,
+            minLimit: false,
+            data: API_KEY
+        });
 
     const apiUrl = `${API_BASE}?${params}`;
     let lastError;
     
     // 首先嘗試直接調用API
-    try {
+        try {
         const response = await fetch(apiUrl);
         if (response.ok) {
             const data = await response.json();
@@ -1773,7 +1773,7 @@ async function getHeatmapData(symbol, interval) {
                 return data.data.data;
             }
         }
-    } catch (error) {
+        } catch (error) {
         lastError = error;
         console.log('直接API調用失敗，嘗試CORS代理...');
     }
@@ -1798,7 +1798,7 @@ async function getHeatmapData(symbol, interval) {
             });
 
             if (response.ok) {
-                const data = await response.json();
+        const data = await response.json();
                 if (data?.data?.data) {
                     recordApiSuccess('coinglass');
                     // 記錄成功的代理
@@ -1806,7 +1806,7 @@ async function getHeatmapData(symbol, interval) {
                     return data.data.data;
                 }
             }
-        } catch (error) {
+    } catch (error) {
             lastError = error;
             console.warn(`CORS代理 ${i + 1} 失敗:`, error.message);
             continue;
@@ -2548,7 +2548,7 @@ document.addEventListener('keydown', (e) => {
         } 
         // 最後關閉 OVB 工具提示
         else {
-            closeAllOVBTooltips();
+        closeAllOVBTooltips();
         }
     }
 });
@@ -2730,3 +2730,619 @@ console.log('  🎯 趨勢分析功能 - 智能判斷市場趨勢並建議是否
 console.log('⚠️ 重要提醒：');
 console.log('  🏦 所有數據均來自期貨合約市場（掛單量 + 價格）');
 console.log('  🌐 由於CORS限制，部分功能可能需要代理服務器'); 
+
+/* ========== 計算工具相關功能 ========== */
+
+// 計算工具全局變數
+let useMarketPrice = true;
+let symbolData = [];
+let priceUpdateInterval;
+let fundingRateInterval;
+
+// 打開計算工具模態窗
+function openCalculatorModal() {
+    document.getElementById('calculatorModalOverlay').style.display = 'flex';
+    
+    // 初始化計算工具
+    if (!symbolData.length) {
+        loadSymbols();
+    }
+}
+
+// 關閉計算工具模態窗
+function closeCalculatorModal() {
+    document.getElementById('calculatorModalOverlay').style.display = 'none';
+    stopPriceUpdates();
+    stopFundingRateUpdates();
+}
+
+// 點擊遮罩關閉模態窗
+document.addEventListener('DOMContentLoaded', function() {
+    const calculatorModal = document.getElementById('calculatorModalOverlay');
+    if (calculatorModal) {
+        calculatorModal.addEventListener('click', function(e) {
+            if (e.target === e.currentTarget) {
+                closeCalculatorModal();
+            }
+        });
+    }
+});
+
+// 價格模式切換
+function togglePriceMode() {
+    useMarketPrice = !useMarketPrice;
+    const btn = document.getElementById('togglePriceBtn');
+    if (btn) {
+        btn.textContent = useMarketPrice ? '使用限價' : '使用市價';
+        
+        if (useMarketPrice) {
+            fetchMarketPrice();
+            startPriceUpdates();
+        } else {
+            stopPriceUpdates();
+        }
+    }
+}
+
+// 啟動即時價格更新
+function startPriceUpdates() {
+    if (priceUpdateInterval) clearInterval(priceUpdateInterval);
+    priceUpdateInterval = setInterval(() => {
+        if (useMarketPrice) {
+            fetchMarketPrice();
+        }
+    }, 3000); // 每3秒更新一次
+}
+
+// 停止價格更新
+function stopPriceUpdates() {
+    if (priceUpdateInterval) {
+        clearInterval(priceUpdateInterval);
+        priceUpdateInterval = null;
+    }
+}
+
+// 停止資金費率更新
+function stopFundingRateUpdates() {
+    if (fundingRateInterval) {
+        clearInterval(fundingRateInterval);
+        fundingRateInterval = null;
+    }
+}
+
+// 轉換函數
+function instIdToDisplay(id) {
+    const p = id.split("-");
+    return p[0] + p[1] + ".P";
+}
+
+function displayToInstId(d) {
+    if (!d.endsWith(".P")) return d;
+    const code = d.slice(0, -2);
+    const base = code.slice(0, -4);
+    const quote = code.slice(-4);
+    return `${base}-${quote}-SWAP`;
+}
+
+// 載入幣種列表
+async function loadSymbols() {
+    try {
+        const res = await fetch("https://www.okx.com/api/v5/public/instruments?instType=SWAP");
+        const data = await res.json();
+        const dl = document.getElementById("symbolList");
+        
+        if (!dl) return;
+        
+        symbolData = data.data.filter(i => i.settleCcy === "USDT" && i.instId.endsWith("-SWAP"));
+        
+        symbolData.forEach(i => {
+            const opt = document.createElement("option");
+            opt.value = instIdToDisplay(i.instId);
+            dl.append(opt);
+        });
+        
+        // 設定預設值
+        const symbolInput = document.getElementById("symbolInput");
+        if (symbolInput) {
+            symbolInput.value = instIdToDisplay("OP-USDT-SWAP");
+            fetchMarketPrice();
+            fetchFundingRate(symbolInput.value);
+            startPriceUpdates();
+            startFundingRateUpdates();
+        }
+    } catch (error) {
+        console.error("載入幣種失敗：", error);
+    }
+}
+
+// 獲取市價
+async function fetchMarketPrice() {
+    try {
+        const symbolInput = document.getElementById("symbolInput");
+        if (!symbolInput) return;
+        
+        const symbolValue = symbolInput.value;
+        if (!symbolValue) return;
+        
+        const inst = displayToInstId(symbolValue);
+        const r = await fetch(`https://www.okx.com/api/v5/market/ticker?instId=${inst}`);
+        const j = await r.json();
+        const p = parseFloat(j.data?.[0]?.last);
+        
+        const entryPriceInput = document.getElementById("entryPrice");
+        if (useMarketPrice && !isNaN(p) && entryPriceInput) {
+            entryPriceInput.value = p;
+            calculateLeverage();
+        }
+    } catch (error) {
+        console.error("獲取市價失敗：", error);
+    }
+}
+
+// 資金費率相關功能
+async function fetchFundingRate(symbol) {
+    const instId = symbol.replace('USDT.P', '-USDT-SWAP');
+    try {
+        const response = await fetch(`https://www.okx.com/api/v5/public/funding-rate?instId=${instId}`);
+        const data = await response.json();
+        
+        const fundingRateSpan = document.getElementById("funding-rate");
+        const fundingRateLongDiv = document.getElementById("funding-rate-long");
+        const fundingRateShortDiv = document.getElementById("funding-rate-short");
+        
+        if (!fundingRateSpan || !fundingRateLongDiv || !fundingRateShortDiv) return;
+        
+        if (data?.data?.length > 0) {
+            const rate = parseFloat(data.data[0].fundingRate);
+            const ratePercent = +(rate * 100).toFixed(6);
+            const percentText = ratePercent.toFixed(4) + '%';
+
+            fundingRateSpan.textContent = percentText;
+            fundingRateSpan.style.color = rate > 0 ? "green" : rate < 0 ? "red" : "gray";
+
+            const isBTC = symbol.startsWith("BTC");
+            let longClass = '', longStrategy = '', longColor = '';
+            let shortClass = '', shortStrategy = '', shortColor = '';
+
+            if (isBTC) {
+                if (ratePercent >= -0.01 && ratePercent <= 0.03) {
+                    longClass = '✅ 正常（建議可交易）';
+                    longColor = 'green';
+                } else if ((ratePercent > 0.03 && ratePercent <= 0.2) || (ratePercent < -0.01 && ratePercent >= -0.03)) {
+                    longClass = '⚠️ 非正常（高成本區）';
+                    longColor = 'orange';
+                } else if ((ratePercent > 0.2 && ratePercent <= 0.375) || (ratePercent < -0.2 && ratePercent >= -0.375)) {
+                    longClass = '❗ 特殊（高風險，勿追高）';
+                    longColor = 'red';
+                } else {
+                    longClass = '🟡 不在定義範圍';
+                    longColor = 'gray';
+                }
+                shortClass = longClass;
+                shortColor = longColor;
+            } else {
+                if (ratePercent >= -0.02 && ratePercent <= 0.06) {
+                    longClass = '✅ 正常（建議可交易）';
+                    longColor = 'green';
+                } else if ((ratePercent > 0.06 && ratePercent <= 0.4) || (ratePercent < -0.02 && ratePercent >= -0.4)) {
+                    longClass = '⚠️ 非正常（高成本區）';
+                    longColor = 'orange';
+                } else if ((ratePercent > 0.4 && ratePercent <= 0.75) || (ratePercent < -0.4 && ratePercent >= -0.75)) {
+                    longClass = '❗ 特殊（高風險，勿追高）';
+                    longColor = 'red';
+                } else {
+                    longClass = '🟡 不在定義範圍';
+                    longColor = 'gray';
+                }
+                shortClass = longClass;
+                shortColor = longColor;
+            }
+
+            if (rate > 0) {
+                longStrategy = '⚠️ 你需付費（空方市場偏強）';
+                shortStrategy = '✅ 可收費（市場偏空）';
+            } else if (rate < 0) {
+                longStrategy = '✅ 可收費（市場偏多）';
+                shortStrategy = '⚠️ 你需付費（多方市場偏強）';
+            } else {
+                longStrategy = '🟡 中性（雙方無資金費）';
+                shortStrategy = '🟡 中性（雙方無資金費）';
+            }
+
+            fundingRateLongDiv.innerHTML = `💡 做多：<span style="color:${longColor}">${longClass}</span>｜<span style="color:${longColor}">${longStrategy}</span>`;
+            fundingRateShortDiv.innerHTML = `💡 做空：<span style="color:${shortColor}">${shortClass}</span>｜<span style="color:${shortColor}">${shortStrategy}</span>`;
+
+        } else {
+            fundingRateSpan.textContent = "無資料";
+            fundingRateLongDiv.textContent = "";
+            fundingRateShortDiv.textContent = "";
+        }
+    } catch (err) {
+        console.error("資金費率取得錯誤：", err);
+        const fundingRateSpan = document.getElementById("funding-rate");
+        const fundingRateLongDiv = document.getElementById("funding-rate-long");
+        const fundingRateShortDiv = document.getElementById("funding-rate-short");
+        
+        if (fundingRateSpan) fundingRateSpan.textContent = "錯誤";
+        if (fundingRateLongDiv) fundingRateLongDiv.textContent = "";
+        if (fundingRateShortDiv) fundingRateShortDiv.textContent = "";
+    }
+}
+
+// 啟動資金費率更新
+function startFundingRateUpdates() {
+    if (fundingRateInterval) clearInterval(fundingRateInterval);
+    fundingRateInterval = setInterval(() => {
+        const symbolInput = document.getElementById("symbolInput");
+        if (symbolInput) {
+            const symbolValue = symbolInput.value;
+            if (symbolValue && symbolValue.endsWith("USDT.P")) {
+                fetchFundingRate(symbolValue);
+            }
+        }
+    }, 15000); // 每15秒更新一次
+}
+
+// 核心計算函數
+function calculateLeverage() {
+    const capitalInput = document.getElementById("capital");
+    const marginRatioInput = document.getElementById("marginRatio");
+    const stoplossInput = document.getElementById("stoploss");
+    const maxLossInput = document.getElementById("maxLoss");
+    const entryPriceInput = document.getElementById("entryPrice");
+    const leverageSpan = document.getElementById("leverage");
+    const positionSpan = document.getElementById("position");
+
+    if (!capitalInput || !marginRatioInput || !stoplossInput || !maxLossInput || !entryPriceInput) return;
+    if (!leverageSpan || !positionSpan) return;
+
+    const cap = +capitalInput.value;
+    const mr = +marginRatioInput.value / 100;
+    const sr = +stoplossInput.value / 100;
+    const ml = +maxLossInput.value;
+    const ep = +entryPriceInput.value;
+
+    if (!cap || !mr || !sr || !ml || !ep) return;
+
+    const B3 = cap * mr;
+    const B4 = ml / (B3 * sr);
+    leverageSpan.textContent = Math.round(B4);
+
+    const position = Math.round(B3 * B4);
+    positionSpan.textContent = `$${position.toLocaleString()} USDT`;
+}
+
+// 書籤功能
+function saveBookmark() {
+    const symbolInput = document.getElementById("symbolInput");
+    const capitalInput = document.getElementById("capital");
+    const entryPriceInput = document.getElementById("entryPrice");
+    const marginRatioInput = document.getElementById("marginRatio");
+    const stoplossInput = document.getElementById("stoploss");
+    const maxLossInput = document.getElementById("maxLoss");
+    const positionSideRadio = document.querySelector('input[name="positionSide"]:checked');
+    
+    if (!symbolInput || !capitalInput || !entryPriceInput || !marginRatioInput || !stoplossInput || !maxLossInput) {
+        alert("請填入必要資訊（幣種、本金、開倉價格）");
+        return;
+    }
+
+    const symbol = symbolInput.value;
+    const capital = capitalInput.value;
+    const entryPrice = entryPriceInput.value;
+    const marginRatio = marginRatioInput.value;
+    const stoploss = stoplossInput.value;
+    const maxLoss = maxLossInput.value;
+    const positionSide = positionSideRadio?.value || "開多";
+
+    if (!symbol || !capital || !entryPrice) {
+        alert("請填入必要資訊（幣種、本金、開倉價格）");
+        return;
+    }
+
+    const bookmark = {
+        id: Date.now(),
+        timestamp: new Date().toLocaleString('zh-TW'),
+        symbol,
+        capital: parseFloat(capital),
+        entryPrice: parseFloat(entryPrice),
+        marginRatio: parseFloat(marginRatio),
+        stoploss: parseFloat(stoploss),
+        maxLoss: parseFloat(maxLoss),
+        positionSide
+    };
+
+    // 計算結果
+    const leverageSpan = document.getElementById("leverage");
+    const positionSpan = document.getElementById("position");
+    
+    if (leverageSpan && positionSpan) {
+        bookmark.results = {
+            leverage: leverageSpan.textContent,
+            position: positionSpan.textContent
+        };
+    }
+
+    // 保存到 localStorage
+    let bookmarks = JSON.parse(localStorage.getItem("tradingBookmarks") || "[]");
+    bookmarks.unshift(bookmark);
+    bookmarks = bookmarks.slice(0, 50); // 最多保存50個書籤
+    localStorage.setItem("tradingBookmarks", JSON.stringify(bookmarks));
+
+    alert("📚 書籤已保存！");
+    loadBookmarks();
+}
+
+// 載入書籤
+function loadBookmarks() {
+    const bookmarks = JSON.parse(localStorage.getItem("tradingBookmarks") || "[]");
+    const listDiv = document.getElementById("historyList");
+    
+    if (!listDiv) return;
+    
+    listDiv.innerHTML = "";
+
+    bookmarks.forEach(bookmark => {
+        const div = document.createElement("div");
+        div.className = "bookmark-card";
+        div.innerHTML = `
+            <div class="bookmark-info">
+                <strong>${bookmark.symbol}</strong> - ${bookmark.positionSide}<br>
+                本金: $${bookmark.capital} | 價格: $${bookmark.entryPrice}<br>
+                槓桿: ${bookmark.results?.leverage || '--'} | 持倉: ${bookmark.results?.position || '--'}<br>
+                <small>${bookmark.timestamp}</small>
+            </div>
+            <div class="bookmark-actions">
+                <button class="apply-btn" onclick="applyBookmark(${bookmark.id})">📋 套用</button>
+                <button class="delete-btn" onclick="deleteBookmark(${bookmark.id})">🗑 刪除</button>
+            </div>
+        `;
+        listDiv.appendChild(div);
+    });
+}
+
+// 套用書籤
+function applyBookmark(id) {
+    const bookmarks = JSON.parse(localStorage.getItem("tradingBookmarks") || "[]");
+    const bookmark = bookmarks.find(b => b.id === id);
+    
+    if (!bookmark) return;
+
+    const symbolInput = document.getElementById("symbolInput");
+    const capitalInput = document.getElementById("capital");
+    const entryPriceInput = document.getElementById("entryPrice");
+    const marginRatioInput = document.getElementById("marginRatio");
+    const stoplossInput = document.getElementById("stoploss");
+    const maxLossInput = document.getElementById("maxLoss");
+    
+    if (symbolInput) symbolInput.value = bookmark.symbol;
+    if (capitalInput) capitalInput.value = bookmark.capital;
+    if (entryPriceInput) entryPriceInput.value = bookmark.entryPrice;
+    if (marginRatioInput) marginRatioInput.value = bookmark.marginRatio;
+    if (stoplossInput) stoplossInput.value = bookmark.stoploss;
+    if (maxLossInput) maxLossInput.value = bookmark.maxLoss;
+
+    // 設定開倉方向
+    const radioBtn = document.querySelector(`input[name="positionSide"][value="${bookmark.positionSide}"]`);
+    if (radioBtn) radioBtn.checked = true;
+
+    // 重新計算和獲取資料
+    calculateLeverage();
+    fetchFundingRate(bookmark.symbol);
+    if (useMarketPrice) {
+        fetchMarketPrice();
+    }
+
+    alert("📋 書籤參數已套用！");
+}
+
+// 刪除書籤
+function deleteBookmark(id) {
+    if (!confirm("確定要刪除這個書籤嗎？")) return;
+    
+    let bookmarks = JSON.parse(localStorage.getItem("tradingBookmarks") || "[]");
+    bookmarks = bookmarks.filter(b => b.id !== id);
+    localStorage.setItem("tradingBookmarks", JSON.stringify(bookmarks));
+    loadBookmarks();
+}
+
+// 清除所有書籤
+function clearAllBookmarks() {
+    if (!confirm("確定要清除所有書籤嗎？此操作無法復原。")) return;
+    
+    localStorage.removeItem("tradingBookmarks");
+    loadBookmarks();
+    alert("🗑 所有書籤已清除！");
+}
+
+// 切換書籤側邊欄
+function toggleBookmarkSidebar() {
+    // 由於書籤已整合在模態窗內，此函數可以為空或進行其他操作
+    loadBookmarks();
+}
+
+// 搜尋相關功能
+function openCryptoSearch() {
+    const cryptoSearchOverlay = document.getElementById("cryptoSearchModalOverlay");
+    if (cryptoSearchOverlay) {
+        cryptoSearchOverlay.style.display = "flex";
+        loadRecentSearches();
+        loadFavorites();
+    }
+}
+
+function closeCryptoSearch() {
+    const cryptoSearchOverlay = document.getElementById("cryptoSearchModalOverlay");
+    if (cryptoSearchOverlay) {
+        cryptoSearchOverlay.style.display = "none";
+    }
+}
+
+function clearSymbolInput() {
+    const symbolInput = document.getElementById('symbolInput');
+    if (symbolInput) {
+        symbolInput.value = '';
+        calculateLeverage();
+    }
+}
+
+function clearSearchResult() {
+    const searchResult = document.getElementById("searchResult");
+    if (searchResult) {
+        searchResult.innerHTML = "";
+    }
+}
+
+function clearCryptoHistory() {
+    localStorage.removeItem("cryptoHistory");
+    const recentSearchList = document.getElementById("recentSearchList");
+    if (recentSearchList) {
+        recentSearchList.innerHTML = "";
+    }
+}
+
+function searchCrypto() {
+    const cryptoSearchInput = document.getElementById("cryptoSearchInput");
+    const searchResult = document.getElementById("searchResult");
+    
+    if (!cryptoSearchInput || !searchResult) return;
+    
+    const query = cryptoSearchInput.value.toUpperCase();
+    
+    if (!query) {
+        searchResult.innerHTML = "";
+        return;
+    }
+
+    const filtered = symbolData.filter(item => {
+        const display = instIdToDisplay(item.instId);
+        return display.includes(query);
+    }).slice(0, 20);
+
+    searchResult.innerHTML = "";
+    filtered.forEach(item => {
+        const display = instIdToDisplay(item.instId);
+        const div = document.createElement("div");
+        div.className = "crypto-item";
+        div.innerHTML = `
+            <span onclick="selectCrypto('${display}')">${display}</span>
+            <button onclick="toggleFavorite('${display}')">⭐</button>
+        `;
+        searchResult.appendChild(div);
+    });
+}
+
+function selectCrypto(symbol) {
+    const symbolInput = document.getElementById("symbolInput");
+    if (symbolInput) {
+        symbolInput.value = symbol;
+        saveToHistory(symbol);
+        fetchMarketPrice();
+        fetchFundingRate(symbol);
+        closeCryptoSearch();
+        calculateLeverage();
+    }
+}
+
+function saveToHistory(symbol) {
+    let history = JSON.parse(localStorage.getItem("cryptoHistory") || "[]");
+    history = history.filter(item => item !== symbol);
+    history.unshift(symbol);
+    history = history.slice(0, 10);
+    localStorage.setItem("cryptoHistory", JSON.stringify(history));
+}
+
+function loadRecentSearches() {
+    const history = JSON.parse(localStorage.getItem("cryptoHistory") || "[]");
+    const recentSearchList = document.getElementById("recentSearchList");
+    
+    if (!recentSearchList) return;
+    
+    recentSearchList.innerHTML = "";
+    
+    history.forEach(symbol => {
+        const div = document.createElement("div");
+        div.className = "crypto-item";
+        div.innerHTML = `<span onclick="selectCrypto('${symbol}')">${symbol}</span>`;
+        recentSearchList.appendChild(div);
+    });
+}
+
+function toggleFavorite(symbol) {
+    let favorites = JSON.parse(localStorage.getItem("cryptoFavorites") || "[]");
+    if (favorites.includes(symbol)) {
+        favorites = favorites.filter(item => item !== symbol);
+    } else {
+        favorites.push(symbol);
+    }
+    localStorage.setItem("cryptoFavorites", JSON.stringify(favorites));
+    loadFavorites();
+}
+
+function loadFavorites() {
+    const favorites = JSON.parse(localStorage.getItem("cryptoFavorites") || "[]");
+    const favoriteList = document.getElementById("favoriteList");
+    
+    if (!favoriteList) return;
+    
+    favoriteList.innerHTML = "";
+    
+    favorites.forEach(symbol => {
+        const div = document.createElement("div");
+        div.className = "favorite-item";
+        div.innerHTML = `
+            <span class="coin-name" onclick="selectCrypto('${symbol}')">${symbol}</span>
+            <button class="remove" onclick="toggleFavorite('${symbol}')">×</button>
+        `;
+        favoriteList.appendChild(div);
+    });
+}
+
+// 初始化計算工具事件監聽器
+function initializeCalculatorEvents() {
+    // 監聽符號輸入變化
+    const symbolInput = document.getElementById("symbolInput");
+    if (symbolInput) {
+        symbolInput.addEventListener("input", () => {
+            const symbolValue = symbolInput.value;
+            if (useMarketPrice) {
+                fetchMarketPrice();
+            }
+            if (symbolValue && symbolValue.endsWith("USDT.P")) {
+                fetchFundingRate(symbolValue);
+            }
+        });
+    }
+
+    // 監聽搜尋輸入
+    const cryptoSearchInput = document.getElementById("cryptoSearchInput");
+    if (cryptoSearchInput) {
+        cryptoSearchInput.addEventListener("input", searchCrypto);
+    }
+
+    // 點擊遮罩關閉彈窗
+    const cryptoSearchOverlay = document.getElementById("cryptoSearchModalOverlay");
+    if (cryptoSearchOverlay) {
+        cryptoSearchOverlay.addEventListener("click", (e) => {
+            if (e.target === e.currentTarget) {
+                closeCryptoSearch();
+            }
+        });
+    }
+
+    // 初始化書籤
+    loadBookmarks();
+}
+
+// 在頁面加載完成後初始化計算工具
+document.addEventListener("DOMContentLoaded", () => {
+    initializeCalculatorEvents();
+});
+
+// 頁面卸載時清理定時器
+window.addEventListener("beforeunload", () => {
+    stopPriceUpdates();
+    stopFundingRateUpdates();
+});
+
+// ... existing code ...

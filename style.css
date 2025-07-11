@@ -2289,3 +2289,640 @@ footer p {
         padding: 10px;
     }
 } 
+
+/* 計算工具懸浮按鈕 */
+.calculator-floating-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 100px;
+    height: 60px;
+    background: linear-gradient(45deg, #ff6b6b, #ff8e8e);
+    border-radius: 30px;
+    box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 9999;
+    transition: all 0.3s ease;
+    border: none;
+    color: white;
+    font-weight: bold;
+}
+
+.calculator-floating-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(255, 107, 107, 0.4);
+    background: linear-gradient(45deg, #ff5252, #ff7979);
+}
+
+.calculator-icon {
+    font-size: 24px;
+    margin-bottom: 2px;
+}
+
+.calculator-text {
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* 計算工具模態窗 */
+.calculator-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+}
+
+.calculator-modal {
+    background: white;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+}
+
+.calculator-header {
+    background: linear-gradient(to right, #ffe066, #ffd700);
+    padding: 20px 25px;
+    border-radius: 20px 20px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.calculator-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 24px;
+}
+
+.calculator-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #333;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 15px;
+    transition: background-color 0.2s;
+}
+
+.calculator-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.calculator-content {
+    padding: 25px;
+    flex: 1;
+}
+
+.calculator-form {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 25px;
+}
+
+.calc-section {
+    min-width: 0;
+}
+
+.calc-section h3 {
+    margin: 0 0 20px 0;
+    color: #333;
+    font-size: 20px;
+}
+
+.calc-section label {
+    display: block;
+    margin-top: 15px;
+    font-weight: 600;
+    color: #555;
+}
+
+.calc-section input[type="number"],
+.calc-section input[list] {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    margin-top: 5px;
+    border: 2px solid #e1e1e1;
+    border-radius: 12px;
+    transition: border-color 0.2s;
+}
+
+.calc-section input:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+/* 符號輸入行 */
+.symbol-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.symbol-row input {
+    flex: 1;
+    padding: 12px;
+    font-size: 16px;
+    border: 2px solid #e1e1e1;
+    border-radius: 12px;
+}
+
+.symbol-row .search-btn {
+    padding: 12px 16px;
+    font-size: 14px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.symbol-row .search-btn:hover {
+    background-color: #218838;
+}
+
+.symbol-row .clear-btn {
+    padding: 12px 16px;
+    font-size: 14px;
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.symbol-row .clear-btn:hover {
+    background-color: #e9ecef;
+}
+
+/* 價格輸入行 */
+.price-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.price-row input {
+    flex: 1;
+}
+
+.price-row button {
+    padding: 12px 16px;
+    font-size: 14px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.price-row button:hover {
+    background-color: #0056b3;
+}
+
+/* 資金費率顯示區 */
+#funding-rate-container {
+    background: rgba(0, 123, 255, 0.05);
+    padding: 15px;
+    border-radius: 12px;
+    margin: 15px 0;
+    border: 1px solid #e1e1e1;
+}
+
+#funding-rate {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+#funding-rate-long, #funding-rate-short {
+    font-size: 14px;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* 開倉方向選擇 */
+.position-radio-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.position-radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0;
+    cursor: pointer;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: 2px solid #e1e1e1;
+    transition: all 0.2s;
+    flex: 1;
+    justify-content: center;
+}
+
+.position-radio-group label:hover {
+    background-color: rgba(0, 123, 255, 0.05);
+    border-color: #007bff;
+}
+
+.position-radio-group input[type="radio"] {
+    width: auto;
+    margin: 0;
+}
+
+.position-radio-group input[type="radio"]:checked + span {
+    color: #007bff;
+    font-weight: bold;
+}
+
+/* 結果顯示網格 */
+.results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.result-item {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+    border-radius: 12px;
+    font-weight: bold;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* 保存書籤按鈕 */
+#saveBtn {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+#saveBtn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.4);
+}
+
+/* 書籤側邊欄 */
+.bookmark-sidebar {
+    width: 300px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 20px;
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid #e1e1e1;
+}
+
+.bookmark-sidebar h4 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 18px;
+}
+
+.bookmark-actions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.bookmark-actions-header .btn-clear {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.bookmark-actions-header .bookmark-toggle {
+    background: #ffc107;
+    color: #000;
+    border: none;
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.bookmark-card {
+    background: white;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border-left: 4px solid #007bff;
+}
+
+.bookmark-info {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #333;
+}
+
+.bookmark-info strong {
+    color: #007bff;
+    font-size: 14px;
+}
+
+.bookmark-info small {
+    color: #666;
+    font-size: 11px;
+}
+
+.bookmark-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.bookmark-actions .apply-btn {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.bookmark-actions .delete-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+/* 加密貨幣搜尋彈窗 */
+.crypto-search-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10001;
+}
+
+.crypto-search-modal {
+    background: #1c1c1e;
+    color: #fff;
+    width: 500px;
+    max-width: 90%;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.crypto-search-modal h3 {
+    margin: 0 0 20px 0;
+    font-size: 20px;
+    border-bottom: 1px solid #333;
+    padding-bottom: 10px;
+}
+
+.crypto-search-modal h4 {
+    margin: 15px 0 8px 0;
+    font-size: 16px;
+    color: #aaa;
+}
+
+#cryptoSearchInput {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #2c2c2e;
+    color: white;
+    margin-bottom: 20px;
+}
+
+.crypto-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.crypto-item {
+    padding: 8px 12px;
+    background: #2b2b2b;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.2s;
+}
+
+.crypto-item:hover {
+    background: #3c3c3c;
+}
+
+.crypto-item button {
+    background: none;
+    border: none;
+    color: #aaa;
+    margin-left: 8px;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.crypto-item button:hover {
+    color: #f55;
+}
+
+.crypto-favorite {
+    margin-bottom: 20px;
+}
+
+#favoriteList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.favorite-item {
+    display: flex;
+    align-items: center;
+    background: #2a2a2a;
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: white;
+    font-size: 13px;
+}
+
+.favorite-item .coin-name {
+    margin-right: 6px;
+    cursor: pointer;
+}
+
+.favorite-item .remove {
+    background: transparent;
+    border: none;
+    color: #bbb;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.favorite-item .remove:hover {
+    color: #f55;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.section-header h4 {
+    margin: 0;
+}
+
+.section-header .btn-clear {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.crypto-search-modal .actions {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.crypto-search-modal .actions button {
+    background: #00bcd4;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.calculator-footer {
+    background: #f8f9fa;
+    padding: 15px 25px;
+    border-radius: 0 0 20px 20px;
+    text-align: center;
+    border-top: 1px solid #e1e1e1;
+}
+
+.calculator-footer p {
+    margin: 0;
+    font-size: 12px;
+    color: #666;
+}
+
+/* 響應式設計 */
+@media (max-width: 768px) {
+    .calculator-floating-btn {
+        width: 80px;
+        height: 50px;
+        bottom: 15px;
+        right: 15px;
+    }
+    
+    .calculator-icon {
+        font-size: 20px;
+    }
+    
+    .calculator-text {
+        font-size: 10px;
+    }
+    
+    .calculator-modal {
+        width: 95%;
+        margin: 10px;
+        max-height: 95vh;
+    }
+    
+    .calculator-form {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .bookmark-sidebar {
+        width: 100%;
+        max-height: 300px;
+    }
+    
+    .crypto-search-modal {
+        width: 95%;
+        padding: 20px;
+    }
+    
+    .results-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .position-radio-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .symbol-row, .price-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .symbol-row input, .price-row input {
+        width: 100%;
+    }
+} 

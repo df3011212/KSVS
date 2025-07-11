@@ -386,6 +386,133 @@
         </footer>
     </div>
 
+    <!-- 計算工具懸浮按鈕 -->
+    <div class="calculator-floating-btn" id="calculatorFloatingBtn" onclick="openCalculatorModal()">
+        <span class="calculator-icon">🧮</span>
+        <span class="calculator-text">槓桿計算</span>
+    </div>
+
+    <!-- 計算工具模態窗 -->
+    <div class="calculator-modal-overlay" id="calculatorModalOverlay" style="display: none;">
+        <div class="calculator-modal">
+            <div class="calculator-header">
+                <h2>🧮 OKX 槓桿獲利計算工具</h2>
+                <button class="calculator-close" onclick="closeCalculatorModal()">×</button>
+            </div>
+            <div class="calculator-content">
+                <!-- 加密貨幣搜尋彈窗 -->
+                <div class="crypto-search-modal-overlay" id="cryptoSearchModalOverlay" style="display: none;">
+                    <div class="crypto-search-modal">
+                        <h3>🔍 加密貨幣搜尋</h3>
+                        <input type="text" id="cryptoSearchInput" placeholder="搜尋幣種（如 BTC、ETH、OP）">
+
+                        <!-- 搜尋結果 -->
+                        <div class="section-header">
+                            <h4>🔎 搜尋結果</h4>
+                            <button class="btn-clear" onclick="clearSearchResult()">🗑 一鍵清除</button>
+                        </div>
+                        <div id="searchResult" class="crypto-list"></div>
+
+                        <!-- 最近搜尋 -->
+                        <div class="section-header">
+                            <h4>🕘 最近搜尋</h4>
+                            <button class="btn-clear" onclick="clearCryptoHistory()">🗑 一鍵清除</button>
+                        </div>
+                        <div class="crypto-list" id="recentSearchList"></div>
+
+                        <!-- 我的最愛 -->
+                        <div class="crypto-favorite">
+                            <h4>⭐ 我的最愛</h4>
+                            <div id="favoriteList"></div>
+                        </div>
+
+                        <div class="actions">
+                            <button onclick="closeCryptoSearch()">關閉</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="calculator-form">
+                    <div class="calc-section">
+                        <h3>開單速算表</h3>
+
+                        <label>選擇幣種
+                            <div class="symbol-row">
+                                <input id="symbolInput" type="text" autocomplete="off" list="symbolList" />
+                                <datalist id="symbolList"></datalist>
+                                <button type="button" class="search-btn" onclick="openCryptoSearch()">🔍 搜尋</button>
+                                <button type="button" class="clear-btn" onclick="clearSymbolInput()">清除</button>
+                            </div>
+                        </label>
+
+                        <label>本金 USDT
+                            <input id="capital" type="number" value="1658" oninput="calculateLeverage()"/>
+                        </label>
+
+                        <label>首次開倉價格
+                            <div class="price-row">
+                                <input id="entryPrice" type="number" step="0.00001" oninput="calculateLeverage()"/>
+                                <button id="togglePriceBtn" onclick="togglePriceMode()">使用限價</button>
+                            </div>
+                        </label>
+
+                        <!-- 資金費率顯示區 -->
+                        <div id="funding-rate-container" style="margin-top: 8px; font-weight: bold;">
+                            資金費率：<span id="funding-rate" style="color:gray;">讀取中...</span>
+                            <div id="funding-rate-long" style="margin-top: 4px; font-size: 14px;"></div>
+                            <div id="funding-rate-short" style="margin-top: 2px; font-size: 14px;"></div>
+                        </div>
+
+                        <label>保證金比例 (%)
+                            <input id="marginRatio" type="number" value="5" oninput="calculateLeverage()"/>
+                        </label>
+
+                        <label>止損比例 (%)
+                            <input id="stoploss" type="number" value="7.52" oninput="calculateLeverage()"/>
+                        </label>
+
+                        <label>最大虧損 USDT
+                            <input id="maxLoss" type="number" value="300" oninput="calculateLeverage()"/>
+                        </label>
+
+                        <label>開倉方向</label>
+                        <div class="position-radio-group">
+                            <label>
+                                <input type="radio" name="positionSide" value="開多" checked>
+                                📈 開多
+                            </label>
+                            <label>
+                                <input type="radio" name="positionSide" value="開空">
+                                📉 開空
+                            </label>
+                        </div>
+
+                        <div class="results-grid">
+                            <div class="result-item">槓桿倍數：<span id="leverage"></span> 倍</div>
+                            <div class="result-item">總持倉量：<span id="position"></span></div>
+                        </div>
+
+                        <!-- 保存書籤功能 -->
+                        <button id="saveBtn" onclick="saveBookmark()">💾 儲存書籤</button>
+                    </div>
+
+                    <!-- 書籤側邊欄 -->
+                    <div class="bookmark-sidebar" id="bookmarkSidebar">
+                        <h4>📖 書籤紀錄</h4>
+                        <div class="bookmark-actions-header">
+                            <button onclick="clearAllBookmarks()" class="btn-clear">🗑 清除全部</button>
+                            <button onclick="toggleBookmarkSidebar()" class="bookmark-toggle">📚</button>
+                        </div>
+                        <div id="historyList"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="calculator-footer">
+                <p>洪士弘 版權所有 ©2025 大仁老師投資理財學堂專屬工具</p>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html> 
