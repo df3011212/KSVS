@@ -9,8 +9,10 @@
 <body>
     <div class="container">
         <header>
-            <h1>士 弘 設 計 📊 Coinglass Heatmap 分析工具</h1>
+            <h1>士 弘 設 計📊 Coinglass Heatmap 分析工具</h1>
             <p>即時加密貨幣支撐阻力分析 + AI 建議 + 期貨合約掛單量</p>
+            <p>盤整專用工具_趨勢來時千萬不要用這個玩</p>
+            <p>趨勢來時_請用RD現貨完整攻略 PINE SCRIPI 工具</p>
         </header>
 
         <div class="controls">
@@ -25,9 +27,12 @@
                 <label for="pair">交易對：</label>
                 <select id="pair">
                     <option value="all">全部</option>
-                    <option value="BTCUSDT">BTCUSDT</option>
-                    <option value="ETHUSDT">ETHUSDT</option>
+                    <option value="BTCUSDT">BTCUSDT 永續合約</option>
+                    <option value="ETHUSDT">ETHUSDT 永續合約</option>
                 </select>
+                <button id="contractInfoBtn" type="button" class="contract-info-btn" title="查看合約詳情">
+                    📋
+                </button>
             </div>
             <div class="control-group">
                 <label for="showOrderBook">顯示掛單量 (期貨)：</label>
@@ -55,6 +60,10 @@
                 <button id="resetOVB" type="button" style="margin-left: 10px; padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 3px; cursor: pointer; font-size: 12px;">重置</button>
             </div>
             <div class="control-group">
+                <label for="enableTrendAnalysis">趨勢分析：</label>
+                <input type="checkbox" id="enableTrendAnalysis" checked>
+            </div>
+            <div class="control-group">
                 <label for="autoUpdate">自動更新：</label>
                 <input type="checkbox" id="autoUpdate" checked>
             </div>
@@ -69,6 +78,298 @@
             </div>
             <button id="analyzeBtn" class="analyze-btn">🔍 開始分析</button>
             <button id="refreshBtn" class="refresh-btn">🔄 重新整理</button>
+        </div>
+
+        <!-- 合約資訊彈出視窗 -->
+        <div class="contract-info-modal" id="contractInfoModal" style="display: none;">
+            <div class="contract-info-content">
+                <div class="contract-info-header">
+                    <h4>📋 期貨合約資訊</h4>
+                    <button class="contract-info-close" id="contractInfoClose">×</button>
+                </div>
+                <div class="contract-info-body">
+                    <div class="contract-section">
+                        <h5>🎯 當前分析合約</h5>
+                        <div class="contract-list" id="contractList">
+                            <div class="contract-item">
+                                <div class="contract-name">BTCUSDT 永續合約</div>
+                                <div class="contract-details">
+                                    <span class="contract-exchange">Binance 期貨</span>
+                                    <span class="contract-type">USDT 保證金永續合約</span>
+                                </div>
+                                <div class="contract-specs">
+                                    <span>合約乘數: 1 BTC</span>
+                                    <span>最小變動: 0.01 USDT</span>
+                                    <span>槓桿: 1x-125x</span>
+                                </div>
+                            </div>
+                            <div class="contract-item">
+                                <div class="contract-name">ETHUSDT 永續合約</div>
+                                <div class="contract-details">
+                                    <span class="contract-exchange">Binance 期貨</span>
+                                    <span class="contract-type">USDT 保證金永續合約</span>
+                                </div>
+                                <div class="contract-specs">
+                                    <span>合約乘數: 1 ETH</span>
+                                    <span>最小變動: 0.01 USDT</span>
+                                    <span>槓桿: 1x-75x</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contract-section">
+                        <h5>📊 數據來源說明</h5>
+                        <div class="data-source-info">
+                            <div class="source-item">
+                                <strong>Coinglass Heatmap API</strong>
+                                <p>提供期貨合約掛單量聚合數據，包含多個交易所的流動性資訊</p>
+                            </div>
+                            <div class="source-item">
+                                <strong>Binance Futures API</strong>
+                                <p>提供即時期貨價格數據和合約規格資訊</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contract-section">
+                        <h5>⚠️ 重要提醒</h5>
+                        <div class="warning-info">
+                            <ul>
+                                <li><strong>純期貨數據</strong>：本工具所有數據（價格 + 掛單量）均來自期貨合約，確保數據一致性</li>
+                                <li><strong>槓桿風險</strong>：期貨合約具有槓桿特性，請注意風險控制</li>
+                                <li><strong>資金費率</strong>：永續合約需支付資金費率，會影響持倉成本</li>
+                                <li><strong>強制平倉</strong>：保證金不足時可能被強制平倉</li>
+                                <li><strong>流動性風險</strong>：市場劇烈波動時，掛單量可能快速變化</li>
+                                <li><strong>價格準確性</strong>：期貨價格可能與現貨存在微小差異，這是正常現象</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="contract-section">
+                        <h5>📈 掛單量數據解釋</h5>
+                        <div class="data-explanation">
+                            <div class="explanation-item">
+                                <strong>買單 (Bids)</strong>
+                                <p>願意以指定價格或更高價格買入的掛單總量</p>
+                            </div>
+                            <div class="explanation-item">
+                                <strong>賣單 (Asks)</strong>
+                                <p>願意以指定價格或更低價格賣出的掛單總量</p>
+                            </div>
+                            <div class="explanation-item">
+                                <strong>支撐位</strong>
+                                <p>大量買單集中的價格區域，可能形成價格支撐</p>
+                            </div>
+                            <div class="explanation-item">
+                                <strong>阻力位</strong>
+                                <p>大量賣單集中的價格區域，可能形成價格阻力</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="contract-section">
+                        <h5>🔄 更新機制</h5>
+                        <div class="update-info">
+                            <p><strong>數據更新頻率</strong>：根據「更新間隔」設定自動更新（5秒-1分鐘）</p>
+                            <p><strong>歷史數據保留</strong>：保留最近30個數據點用於趨勢分析</p>
+                            <p><strong>API 限制</strong>：請適度使用自動更新功能，避免過度請求</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 趨勢分析區塊 -->
+        <div class="trend-analysis" id="trendAnalysis">
+            <div class="trend-header">
+                <div class="trend-title-container">
+                    <h3>📊 市場趨勢分析</h3>
+                    <button class="trend-help-btn" id="trendHelpBtn" type="button" title="點擊查看詳細說明">
+                        <span class="help-icon">❓</span>
+                    </button>
+                    <!-- 趨勢分析說明彈出視窗 -->
+                    <div class="trend-help-tooltip" id="trendHelpTooltip" style="display: none;">
+                        <div class="trend-help-content">
+                            <div class="trend-help-header">
+                                <h4>📊 市場趨勢分析說明</h4>
+                                <button class="trend-help-close" id="trendHelpClose">×</button>
+                            </div>
+                            <div class="trend-help-body">
+                                <div class="help-section">
+                                    <h5>🎯 功能概述</h5>
+                                    <p>智能分析市場趨勢狀態，判斷當前是否適合使用此盤整工具，避免在趨勢市場中錯誤使用。</p>
+                                </div>
+                                
+                                <div class="help-section">
+                                    <h5>📈 分析指標</h5>
+                                    <ul>
+                                        <li><strong>趨勢強度</strong>：計算市場趨勢的強弱程度 (0-10%+)</li>
+                                        <li><strong>波動性</strong>：分析市場價格波動幅度 (0-5%+)</li>
+                                        <li><strong>市場狀態</strong>：上升趨勢/下降趨勢/盤整/高波動</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="help-section">
+                                    <h5>✅ 適用性建議</h5>
+                                    <ul>
+                                        <li><span class="status-excellent">✅ 非常適合</span>：盤整市場，低波動，完美的區間交易環境</li>
+                                        <li><span class="status-good">✅ 適合使用</span>：輕微波動，但支撐阻力仍有效</li>
+                                        <li><span class="status-caution">⚠️ 謹慎使用</span>：市場不明確，建議輕倉試探</li>
+                                        <li><span class="status-poor">❌ 不建議使用</span>：強趨勢市場，請改用趨勢工具</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="help-section">
+                                    <h5>🔄 更新機制</h5>
+                                    <ul>
+                                        <li>跟隨「自動更新」設定，與掛單量數據同步更新</li>
+                                        <li>累積歷史數據（30個數據點），分析越來越準確</li>
+                                        <li>初次使用基於支撐阻力位估計，後續使用歷史數據</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="help-section">
+                                    <h5>💡 使用建議</h5>
+                                    <ul>
+                                        <li>趨勢來時千萬不要用這個工具！</li>
+                                        <li>強趨勢市場請改用 RD 現貨完整攻略</li>
+                                        <li>開啟自動更新可獲得更準確的分析</li>
+                                        <li>結合 AI 建議和工具適用性建議做決策</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="trend-status" id="trendStatus">
+                    <span class="trend-indicator neutral" id="trendIndicator">⚪</span>
+                    <span class="trend-text" id="trendText">分析中...</span>
+                </div>
+            </div>
+            <div class="trend-update-info" id="trendUpdateInfo">
+                <div class="trend-update-status">
+                    <span class="trend-update-indicator" id="trendUpdateIndicator">⚪</span>
+                    <span class="trend-update-text" id="trendUpdateText">等待分析...</span>
+                </div>
+                <div class="trend-last-update" id="trendLastUpdate">
+                    尚未更新
+                </div>
+            </div>
+            <div class="trend-data-source" id="trendDataSource">
+                <div class="data-source-header">
+                    <span class="source-icon">🔗</span>
+                    <span class="source-title">數據來源</span>
+                </div>
+                <div class="data-source-content">
+                    <div class="source-item-inline">
+                        <span class="source-name">Coinglass API</span>
+                        <span class="source-desc">期貨掛單量</span>
+                        <span class="source-status" id="coinglassStatus">🟢</span>
+                    </div>
+                    <div class="source-separator">+</div>
+                    <div class="source-item-inline">
+                        <span class="source-name">Binance Futures API</span>
+                        <span class="source-desc">期貨價格</span>
+                        <span class="source-status" id="binanceStatus">🟢</span>
+                    </div>
+                </div>
+                <div class="data-reliability" id="dataReliability">
+                    <span class="reliability-text">數據可靠性：</span>
+                    <span class="reliability-level" id="reliabilityLevel">即時更新</span>
+                </div>
+                <div class="data-consistency-note">
+                    <span class="consistency-icon">✅</span>
+                    <span class="consistency-text">價格與掛單量同源，數據一致性佳</span>
+                </div>
+            </div>
+            <div class="trend-content" id="trendContent">
+                <div class="trend-metrics">
+                    <div class="trend-metric">
+                        <div class="trend-metric-label">趨勢強度</div>
+                        <div class="trend-metric-value" id="trendStrength">--</div>
+                        <div class="trend-strength-bar">
+                            <div class="strength-bar-fill" id="strengthBarFill"></div>
+                        </div>
+                    </div>
+                    <div class="trend-metric">
+                        <div class="trend-metric-label">波動性</div>
+                        <div class="trend-metric-value" id="trendVolatility">--</div>
+                        <div class="volatility-indicator">
+                            <div class="volatility-dots" id="volatilityDots"></div>
+                        </div>
+                    </div>
+                    <div class="trend-metric">
+                        <div class="trend-metric-label">市場狀態</div>
+                        <div class="trend-metric-value" id="marketState">--</div>
+                        <div class="market-state-visual" id="marketStateVisual"></div>
+                    </div>
+                </div>
+                
+                <!-- 新增可視化區域 -->
+                <div class="trend-visuals">
+                    <!-- 價格位置指示器 -->
+                    <div class="price-position-indicator" id="pricePositionIndicator">
+                        <h6>💰 價格位置分析</h6>
+                        <div class="price-range-bar">
+                            <div class="price-range-support">支撐</div>
+                            <div class="price-range-track">
+                                <div class="price-current-position" id="priceCurrentPosition"></div>
+                            </div>
+                            <div class="price-range-resistance">阻力</div>
+                        </div>
+                        <div class="price-position-text" id="pricePositionText">等待分析...</div>
+                    </div>
+                    
+                    <!-- 買賣壓力圖 -->
+                    <div class="pressure-indicator" id="pressureIndicator">
+                        <h6>⚖️ 買賣壓力對比</h6>
+                        <div class="pressure-bars">
+                            <div class="pressure-bar buy-pressure">
+                                <div class="pressure-label">買盤</div>
+                                <div class="pressure-bar-container">
+                                    <div class="pressure-bar-fill buy" id="buyPressureFill"></div>
+                                </div>
+                                <div class="pressure-value" id="buyPressureValue">--</div>
+                            </div>
+                            <div class="pressure-bar sell-pressure">
+                                <div class="pressure-label">賣盤</div>
+                                <div class="pressure-bar-container">
+                                    <div class="pressure-bar-fill sell" id="sellPressureFill"></div>
+                                </div>
+                                <div class="pressure-value" id="sellPressureValue">--</div>
+                            </div>
+                        </div>
+                        <div class="pressure-ratio" id="pressureRatio">買賣比例: --</div>
+                    </div>
+                    
+                    <!-- 趨勢方向羅盤 -->
+                    <div class="trend-compass" id="trendCompass">
+                        <h6>🧭 趨勢方向</h6>
+                        <div class="compass-container">
+                            <div class="compass-circle">
+                                <div class="compass-needle" id="compassNeedle"></div>
+                                <div class="compass-center"></div>
+                                <div class="compass-labels">
+                                    <span class="compass-label north">看漲</span>
+                                    <span class="compass-label east">橫盤</span>
+                                    <span class="compass-label south">看跌</span>
+                                    <span class="compass-label west">震盪</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="compass-text" id="compassText">等待分析...</div>
+                    </div>
+                </div>
+                <div class="tool-suitability" id="toolSuitability">
+                    <div class="suitability-header">
+                        <h4>🎯 工具適用性建議</h4>
+                    </div>
+                    <div class="suitability-content" id="suitabilityContent">
+                        點擊「開始分析」來獲取趨勢分析結果
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="status" id="status">
