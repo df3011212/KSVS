@@ -365,21 +365,46 @@ function generateBiasedLongSuggestion(pair, price, sup, res, config) {
     const distanceToSup = price - sup;
     const totalRange = res - sup;
     
+    // 計算詳細的進場、止損和止盈位置
+    const entryPrice = sup + totalRange * 0.03; // 支撐位上方3%作為進場價
+    const stopLoss = sup * 0.985; // 支撐位下方1.5%作為止損
+    const takeProfit1 = res - totalRange * 0.15; // 阻力位下方15%作為第一止盈
+    const takeProfit2 = res - totalRange * 0.05; // 阻力位下方5%作為第二止盈
+    const finalTarget = res; // 阻力位作為最終目標
+    
+    // 計算風險回報比
+    const riskAmount = entryPrice - stopLoss;
+    const rewardAmount = takeProfit1 - entryPrice;
+    const rrRatio = rewardAmount / riskAmount;
+    
     return `📊 價格分析 (${pair})
 ━━━━━━━━━━━━━━━━
 💰 當前價格：$${formatPrice(price)}
 📈 支撐位置：$${formatPrice(sup)} (距離 ${formatPrice(distanceToSup)})
 📉 阻力位置：$${formatPrice(res)}
 
-🎯 操作建議：
+🎯 做多操作建議：
 • 偏向支撐，可考慮輕倉做多
 • 建議等待回調至 $${formatPrice(sup + totalRange * 0.05)} 以下
 • 或突破 $${formatPrice(sup + totalRange * 0.15)} 後追多
 
+📌 具體操作計劃：
+🔸 進場價位：$${formatPrice(entryPrice)} 附近
+🛑 停損設置：$${formatPrice(stopLoss)} (-${((entryPrice - stopLoss) / entryPrice * 100).toFixed(1)}%)
+🎯 TP1 目標：$${formatPrice(takeProfit1)} (+${((takeProfit1 - entryPrice) / entryPrice * 100).toFixed(1)}%) 【部分止盈50%】
+🎯 TP2 目標：$${formatPrice(takeProfit2)} (+${((takeProfit2 - entryPrice) / entryPrice * 100).toFixed(1)}%) 【部分止盈30%】
+🏆 最終目標：$${formatPrice(finalTarget)} (+${((finalTarget - entryPrice) / entryPrice * 100).toFixed(1)}%) 【最後20%】
+
+📊 風險回報分析：
+• RR 比例：1:${rrRatio.toFixed(2)}
+• 總預期回報：${((finalTarget - entryPrice) / entryPrice * 100).toFixed(1)}%
+• 最大風險：${((entryPrice - stopLoss) / entryPrice * 100).toFixed(1)}%
+
 ⚠️ 風險控制：
 • 輕倉試探，嚴格止損
-• 停損設在 $${formatPrice(sup * 0.985)} 以下
-• 關注支撐位是否有效`;
+• 分批止盈，保護利潤
+• 關注支撐位是否有效
+• 密切關注成交量變化`;
 }
 
 // 生成偏向做空建議
@@ -387,27 +412,58 @@ function generateBiasedShortSuggestion(pair, price, sup, res, config) {
     const distanceToRes = res - price;
     const totalRange = res - sup;
     
+    // 計算詳細的進場、止損和止盈位置
+    const entryPrice = res - totalRange * 0.03; // 阻力位下方3%作為進場價
+    const stopLoss = res * 1.015; // 阻力位上方1.5%作為止損
+    const takeProfit1 = sup + totalRange * 0.15; // 支撐位上方15%作為第一止盈
+    const takeProfit2 = sup + totalRange * 0.05; // 支撐位上方5%作為第二止盈
+    const finalTarget = sup; // 支撐位作為最終目標
+    
+    // 計算風險回報比
+    const riskAmount = stopLoss - entryPrice;
+    const rewardAmount = entryPrice - takeProfit1;
+    const rrRatio = rewardAmount / riskAmount;
+    
     return `📊 價格分析 (${pair})
 ━━━━━━━━━━━━━━━━
 💰 當前價格：$${formatPrice(price)}
 📈 支撐位置：$${formatPrice(sup)}
 📉 阻力位置：$${formatPrice(res)} (距離 ${formatPrice(distanceToRes)})
 
-🎯 操作建議：
+🎯 做空操作建議：
 • 偏向阻力，可考慮輕倉做空
 • 建議等待反彈至 $${formatPrice(res - totalRange * 0.05)} 以上
 • 或跌破 $${formatPrice(res - totalRange * 0.15)} 後追空
 
+📌 具體操作計劃：
+🔸 進場價位：$${formatPrice(entryPrice)} 附近
+🛑 停損設置：$${formatPrice(stopLoss)} (+${((stopLoss - entryPrice) / entryPrice * 100).toFixed(1)}%)
+🎯 TP1 目標：$${formatPrice(takeProfit1)} (-${((entryPrice - takeProfit1) / entryPrice * 100).toFixed(1)}%) 【部分止盈50%】
+🎯 TP2 目標：$${formatPrice(takeProfit2)} (-${((entryPrice - takeProfit2) / entryPrice * 100).toFixed(1)}%) 【部分止盈30%】
+🏆 最終目標：$${formatPrice(finalTarget)} (-${((entryPrice - finalTarget) / entryPrice * 100).toFixed(1)}%) 【最後20%】
+
+📊 風險回報分析：
+• RR 比例：1:${rrRatio.toFixed(2)}
+• 總預期回報：${((entryPrice - finalTarget) / entryPrice * 100).toFixed(1)}%
+• 最大風險：${((stopLoss - entryPrice) / entryPrice * 100).toFixed(1)}%
+
 ⚠️ 風險控制：
 • 輕倉試探，嚴格止損
-• 停損設在 $${formatPrice(res * 1.015)} 以上
-• 關注阻力位是否有效`;
+• 分批止盈，保護利潤
+• 關注阻力位是否有效
+• 密切關注成交量變化`;
 }
 
 // 生成中性建議
 function generateNeutralSuggestion(pair, price, sup, res, pricePosition) {
     const totalRange = res - sup;
     const isBTC = pair.startsWith('BTC');
+    
+    // 計算區間交易的進場和止盈位置
+    const longEntryNear = sup + totalRange * 0.05; // 支撐位上方5%
+    const shortEntryNear = res - totalRange * 0.05; // 阻力位下方5%
+    const longTP1 = price + totalRange * 0.15; // 當前價格上方15%
+    const shortTP1 = price - totalRange * 0.15; // 當前價格下方15%
     
     return `📊 價格分析 (${pair})
 ━━━━━━━━━━━━━━━━
@@ -416,20 +472,33 @@ function generateNeutralSuggestion(pair, price, sup, res, pricePosition) {
 📉 阻力位置：$${formatPrice(res)}
 📍 位置比例：${(pricePosition * 100).toFixed(1)}%
 
-🚫 暫不建議進場：
+🚫 暫不建議立即進場：
 • 價格位於區間中段
 • 上下空間相對有限
 • 風險回報比不佳
 
-🎯 等待機會：
+🎯 區間交易策略：
 • 觀察是否突破 $${formatPrice(res)}
 • 或回調至 $${formatPrice(sup)} 支撐
 • 建議等待更明確的方向信號
 
-💡 策略建議：
-• 可設置 $${formatPrice(sup)} 附近掛多單
-• 可設置 $${formatPrice(res)} 附近掛空單
-• 採用區間震盪策略`;
+💡 預設掛單策略：
+📈 做多掛單設置：
+• 進場價位：$${formatPrice(longEntryNear)} 附近（支撐區域）
+• TP1 目標：$${formatPrice(longTP1)}
+• 最終目標：$${formatPrice(res - totalRange * 0.05)}
+• 停損位置：$${formatPrice(sup * 0.985)}
+
+📉 做空掛單設置：
+• 進場價位：$${formatPrice(shortEntryNear)} 附近（阻力區域）
+• TP1 目標：$${formatPrice(shortTP1)}
+• 最終目標：$${formatPrice(sup + totalRange * 0.05)}
+• 停損位置：$${formatPrice(res * 1.015)}
+
+⚠️ 注意事項：
+• 採用區間震盪策略
+• 嚴格設置止損，防範突破風險
+• 建議小倉位試探，等待明確信號`;
 }
 
 /* ========== OVB 拋售偵測函數 ========== */
